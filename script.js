@@ -11,6 +11,7 @@ var hueIncrement = 0.1;
 var platformStart, platformEnd;
 var cellSize = 4
 var gravity = 1;
+var substract = false;
 
 function spawnSand(event) {
   var x, y;
@@ -32,7 +33,7 @@ function spawnSand(event) {
         var newY = y + i;
         // Check if the new coordinates are within the grid
         if (newX >= 0 && newX < grid[0].length && newY >= 0 && newY < grid.length) {
-          if (radius > -1) {
+          if (!substract) {
             hue = (hue + hueIncrement) % 360;  // Increment and wrap the hue
             grid[newY][newX] = hue;  // Spawn sand with the current hue
           } else {
@@ -49,10 +50,10 @@ canvas.addEventListener('wheel', function(event) {
   
   if (event.deltaY < 0) {
     // Scroll up, increase the radius
-    radius = Math.min(radius + 1, 4);
+    radius = Math.min(radius + 1, 8);
   } else {
     // Scroll down, decrease the radius
-    radius = Math.max(radius - 1, -3);
+    radius = Math.max(radius - 1, 0);
   }
 
   event.preventDefault();
@@ -120,10 +121,13 @@ window.addEventListener('keydown', function(event) {
       grid[i].fill(0);
     }
   }
-  if (event.key === 'ArrowUp') {
+  else if (event.key === 's') {
+    substract = !substract;
+  }
+  else if (event.key === 'ArrowUp') {
     gravity = -1;
   }
-  if (event.key === 'ArrowDown') {
+  else if (event.key === 'ArrowDown') {
     gravity = 1;
   }
 });
