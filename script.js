@@ -2,7 +2,9 @@ var canvas = document.querySelector('canvas');
 var ctx = canvas.getContext('2d');
 
 var isMouseDown = false;
+var isRightMouseDown = false;
 var lastEvent;
+var lastEvent2;
 var radius = 2;
 var hue = 0;
 var hueIncrement = 0.1;
@@ -64,6 +66,8 @@ canvas.addEventListener('mousedown', function(event) {
   }
   if (event.button === 2) {  // Right mouse button
     platformStart = { x: event.clientX, y: event.clientY };
+    isRightMouseDown = true;
+    lastEvent2 = event;
   }
 });
 canvas.addEventListener('mouseup', function(event) {
@@ -73,11 +77,16 @@ canvas.addEventListener('mouseup', function(event) {
   if (event.button === 2) {  // Right mouse button
     platformEnd = { x: event.clientX, y: event.clientY };
     createPlatform(platformStart, platformEnd);
+    isRightMouseDown = false;
+    lastEvent2 = event;
   }
 });
 canvas.addEventListener('mousemove', function(event) {
-  if(isMouseDown) {
-    spawnSand(event);
+  if (isMouseDown) {
+    lastEvent = event;
+  }
+  if (isRightMouseDown) {
+    lastEvent2 = event;
   }
 });
 canvas.addEventListener('touchstart', function(event) {
@@ -133,6 +142,10 @@ function createPlatform(start, end) {
     var e2 = 2*err;
     if (e2 > -dy){ err -= dy; startX += sx; }
     if (e2 < dx){ err += dx; startY += sy; }
+    if (e2 > -dy && e2 < dx) { // If stepping in both x and y direction
+      grid[startY - sy][startX] = -1; // Fill in the extra cell
+      grid[startY][startX - sx] = -1; // Fill in the extra cell
+    }
   }
 }
 
@@ -233,10 +246,20 @@ function animate(grid) {
 
   drawGrid(ctx, grid, cellSize);
 
+  // Draw the preview line
+  if (platformStart && isRightMouseDown) {
+    ctx.beginPath();
+    ctx.moveTo(platformStart.x, platformStart.y);
+    ctx.lineTo(lastEvent2.clientX, lastEvent2.clientY);
+    ctx.strokeStyle = 'white';
+    ctx.stroke();
+  }
+
   requestAnimationFrame(function() {
-      animate(grid);
+    animate(grid);
   });
 }
+
 
 // Create the grid and start the animation
 var grid = createGrid();
