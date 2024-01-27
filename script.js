@@ -6,6 +6,8 @@ var lastEvent;
 var radius = 2;
 var hue = 0;
 var hueIncrement = 0.1;
+var platformStart, platformEnd;
+
 
 function spawnSand(event) {
   var cellSize = 5;
@@ -56,15 +58,26 @@ canvas.addEventListener('wheel', function(event) {
 
 
 canvas.addEventListener('mousedown', function(event) {
-  isMouseDown = true;
-  lastEvent = event;
+  if(event.button === 0) {
+    isMouseDown = true;
+    lastEvent = event;
+  }
+  if (event.button === 2) {  // Right mouse button
+    platformStart = { x: event.clientX, y: event.clientY };
+  }
 });
-canvas.addEventListener('mouseup', function() {
-  isMouseDown = false;
+canvas.addEventListener('mouseup', function(event) {
+  if(event.button === 0) {
+    isMouseDown = false;
+  }
+  if (event.button === 2) {  // Right mouse button
+    platformEnd = { x: event.clientX, y: event.clientY };
+    createPlatform(platformStart, platformEnd);
+  }
 });
 canvas.addEventListener('mousemove', function(event) {
-  if (isMouseDown) {
-      lastEvent = event;
+  if(isMouseDown) {
+    spawnSand(event);
   }
 });
 canvas.addEventListener('touchstart', function(event) {
@@ -80,12 +93,17 @@ canvas.addEventListener('touchmove', function(event) {
     lastEvent = event;
   }
 });
+
 // Continuously spawn sand at the last known mouse or touch position
 setInterval(function() {
   if (isMouseDown) {
     spawnSand(lastEvent);
   }
 }, 30);
+
+canvas.addEventListener('contextmenu', function(event) {
+  event.preventDefault();  // Prevent the context menu from showing
+});
 
 window.addEventListener('keydown', function(event) {
   if (event.key === 'r') {
@@ -94,6 +112,29 @@ window.addEventListener('keydown', function(event) {
     }
   }
 });
+
+function createPlatform(start, end) {
+  var cellSize = 5;
+  var startX = Math.floor(start.x / cellSize);
+  var startY = Math.floor(start.y / cellSize);
+  var endX = Math.floor(end.x / cellSize);
+  var endY = Math.floor(end.y / cellSize);
+
+  var dx = Math.abs(endX - startX);
+  var dy = Math.abs(endY - startY);
+  var sx = (startX < endX) ? 1 : -1;
+  var sy = (startY < endY) ? 1 : -1;
+  var err = dx - dy;
+
+  while(true){
+    grid[startY][startX] = -1;  // Set the grid cell to -1 to create the platform
+
+    if ((startX === endX) && (startY === endY)) break;
+    var e2 = 2*err;
+    if (e2 > -dy){ err -= dy; startX += sx; }
+    if (e2 < dx){ err += dx; startY += sy; }
+  }
+}
 
 
 // Function to create a grid
@@ -116,6 +157,10 @@ function drawGrid(ctx, grid, cellSize) {
     for (var j = 0; j < grid[i].length; j++) {
       if (grid[i][j] > 0) {
         ctx.fillStyle = 'hsl(' + grid[i][j] + ', 100%, 50%)';
+        ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+      }
+      else if (grid[i][j] === -1) {
+        ctx.fillStyle = 'white';
         ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
       }
     }
@@ -156,12 +201,18 @@ function fallingSand(oldGrid) {
         if (oldGrid[i][j] > 0) {
           handleSandFalling(oldGrid, i, j);
         }
+        else if (oldGrid[i][j] === -1) {
+          oldGrid[i][j] = -1;
+        }
       }
     } else {
       // Process the cells from right to left
       for (var j = oldGrid[i].length - 1; j >= 0; j--) {
         if (oldGrid[i][j] > 0) {
           handleSandFalling(oldGrid, i, j);
+        }
+        else if (oldGrid[i][j] === -1) {
+          oldGrid[i][j] = -1;
         }
       }
     }
