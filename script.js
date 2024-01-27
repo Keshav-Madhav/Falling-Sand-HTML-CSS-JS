@@ -13,21 +13,19 @@ var cellSize = 4
 var gravity = 1;
 var substract = false;
 
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
 function spawnSand(event) {
   var x, y;
 
-  // Check if the event is a touch event
-  if (event.touches) {
-    x = Math.floor(event.touches[0].clientX / cellSize);
-    y = Math.floor(event.touches[0].clientY / cellSize);
-  } else {  // The event is a mouse event
-    x = Math.floor(event.clientX / cellSize);
-    y = Math.floor(event.clientY / cellSize);
-  }
+  x = (event.touches ? event.touches[0].clientX : event.clientX) / cellSize | 0;
+  y = (event.touches ? event.touches[0].clientY : event.clientY) / cellSize | 0;
 
   // Spawn sand in a radius around the click or touch point
-  for (var i = -Math.abs(radius); i <= Math.abs(radius); i++) {
-    for (var j = -Math.abs(radius); j <= Math.abs(radius); j++) {
+  var absRadius = Math.abs(radius);
+  for (var i = -absRadius; i <= absRadius; i++) {
+    for (var j = -absRadius; j <= absRadius; j++) {
       if (i*i + j*j <= radius*radius) {  // Check if the cell is within the radius
         var newX = x + j;
         var newY = y + i;
@@ -188,30 +186,27 @@ function drawGrid(ctx, grid, cellSize) {
   }
 }
 
-// Function to handle sand falling logic
 function handleSandFalling(oldGrid, i, j) {
-  var next = oldGrid[i + gravity][j];
-  var nextLeft = j > 0 ? oldGrid[i + gravity][j - 1] : 1;
-  var nextRight = j < oldGrid[i].length - 1 ? oldGrid[i + gravity][j + 1] : 1;
+  var nextRow = i + gravity;
+  var next = oldGrid[nextRow][j];
+  var nextLeft = oldGrid[nextRow][j - 1];
+  var nextRight = oldGrid[nextRow][j + 1];
 
   if (next === 0) {
-    oldGrid[i + gravity][j] = oldGrid[i][j];
+    oldGrid[nextRow][j] = oldGrid[i][j];
     oldGrid[i][j] = 0;
   } else if (nextLeft === 0 && nextRight === 0) {
-    if (Math.random() < 0.5) {
-      oldGrid[i + gravity][j - 1] = oldGrid[i][j];
-    } else {
-      oldGrid[i + gravity][j + 1] = oldGrid[i][j];
-    }
+    oldGrid[nextRow][j + (Math.random() < 0.5 ? -1 : 1)] = oldGrid[i][j];
     oldGrid[i][j] = 0;
   } else if (nextLeft === 0) {
-    oldGrid[i + gravity][j - 1] = oldGrid[i][j];
+    oldGrid[nextRow][j - 1] = oldGrid[i][j];
     oldGrid[i][j] = 0;
   } else if (nextRight === 0) {
-    oldGrid[i + gravity][j + 1] = oldGrid[i][j];
+    oldGrid[nextRow][j + 1] = oldGrid[i][j];
     oldGrid[i][j] = 0;
   }
 }
+
 
 function fallingSand(oldGrid) {
   var start = gravity === 1 ? oldGrid.length - 2 : 1;
@@ -219,37 +214,21 @@ function fallingSand(oldGrid) {
   var step = gravity === 1 ? -1 : 1;
 
   for (var i = start; gravity === 1 ? i >= end : i <= end; i += step) {
-    // Alternate the direction for each row
-    if (i % 2 === 0) {
-      // Process the cells from left to right
-      for (var j = 0; j < oldGrid[i].length; j++) {
-        if (oldGrid[i][j] > 0) {
-          handleSandFalling(oldGrid, i, j, gravity);
-        }
-        else if (oldGrid[i][j] === -1) {
-          oldGrid[i][j] = -1;
-        }
-      }
-    } else {
-      // Process the cells from right to left
-      for (var j = oldGrid[i].length - 1; j >= 0; j--) {
-        if (oldGrid[i][j] > 0) {
-          handleSandFalling(oldGrid, i, j, gravity);
-        }
-        else if (oldGrid[i][j] === -1) {
-          oldGrid[i][j] = -1;
-        }
+    var startJ = (i % 2 === 0) ? 0 : oldGrid[i].length - 1;
+    var endJ = (i % 2 === 0) ? oldGrid[i].length : -1;
+    var stepJ = (i % 2 === 0) ? 1 : -1;
+
+    for (var j = startJ; gravity === 1 ? j !== endJ : j !== endJ; j += stepJ) {
+      if (oldGrid[i][j] > 0) {
+        handleSandFalling(oldGrid, i, j);
+      } else if (oldGrid[i][j] === -1) {
+        oldGrid[i][j] = -1;
       }
     }
   }
 }
 
-
 function animate(grid) {
-  // Set the canvas size to match the window
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-
   // Clear the canvas
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
