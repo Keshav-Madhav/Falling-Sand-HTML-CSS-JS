@@ -5,10 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Falling Sand</title>
 </head>
-<body style="padding: 0; margin: 0; overflow: hidden;">
-  <canvas class="canvas" style="padding: 0; margin: 0;">
+<body style="padding: 0; margin: 0; overflow: hidden; position: relative;">
+  <p style="position: absolute; color: white; z-index: 1000; left: 10px; user-select: none; pointer-events: none;">Brush Size: <span id="brush">3</span></p>
+  <p style="position: absolute; color: white; z-index: 1000; left: 10px; top: 20px; user-select: none; pointer-events: none;">Brush Type: <span id="type">Spawn</span></p>
+  <p style="position: absolute; color: white; z-index: 1000; right: 10px; user-select: none; pointer-events: none;">Particle Count: <span id="count">0</span></p>
 
-  </canvas>
+  <p style="font-size: 15px; position: absolute; color: white; z-index: 1000; right: 10px; top: 95vh; user-select: none; pointer-events: none;">to clear all sand (R) </p>
+  <p style="font-size: 15px; position: absolute; color: white; z-index: 1000; right: 10px; top: 93vh; user-select: none; pointer-events: none;">to clear first platform (C) </p>
+  <p style="font-size: 15px; position: absolute; color: white; z-index: 1000; right: 10px; top: 91vh; user-select: none; pointer-events: none;">to increase brush size (+) </p>
+  <p style="font-size: 15px; position: absolute; color: white; z-index: 1000; right: 10px; top: 89vh; user-select: none; pointer-events: none;">to decrease brush size (-) </p>
+  <p style="font-size: 15px; position: absolute; color: white; z-index: 1000; right: 10px; top: 87vh; user-select: none; pointer-events: none;">to change brush type (s) </p>
+  <p style="font-size: 15px; position: absolute; color: white; z-index: 1000; right: 10px; top: 85vh; user-select: none; pointer-events: none;">to invert gravity (arrow) </p>
+  <canvas class="canvas" style="padding: 0; margin: 0; position: absolute;"></canvas>
 </body>
 <script src="script.js"></script>
 </html>

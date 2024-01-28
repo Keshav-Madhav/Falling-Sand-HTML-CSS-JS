@@ -1,6 +1,10 @@
 var canvas = document.querySelector('canvas');
 var ctx = canvas.getContext('2d');
 
+var brushDisplay = document.getElementById('brush');
+var typeDisplay = document.getElementById('type');
+var countDisplay = document.getElementById('count');
+
 var isMouseDown = false;
 var isRightMouseDown = false;
 var lastEvent;
@@ -9,9 +13,12 @@ var radius = 2;
 var hue = 0;
 var hueIncrement = 0.1;
 var platformStart, platformEnd;
-var cellSize = 4
+var cellSize = 4;
 var gravity = 1;
 var substract = false;
+var spawnFrequency = 50;
+var platforms = []
+var count = 0;
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -22,6 +29,9 @@ function spawnSand(event) {
   x = (event.touches ? event.touches[0].clientX : event.clientX) / cellSize | 0;
   y = (event.touches ? event.touches[0].clientY : event.clientY) / cellSize | 0;
 
+  // Counter for the number of sand particles added or removed
+  var deltaCount = 0;
+
   // Spawn sand in a radius around the click or touch point
   var absRadius = Math.abs(radius);
   for (var i = -absRadius; i <= absRadius; i++) {
@@ -31,27 +41,36 @@ function spawnSand(event) {
         var newY = y + i;
         // Check if the new coordinates are within the grid
         if (newX >= 0 && newX < grid[0].length && newY >= 0 && newY < grid.length) {
-          if (!substract) {
+          if (!substract && grid[newY][newX] === 0) {
+            deltaCount++;  // Increment deltaCount for each new sand particle
             hue = (hue + hueIncrement) % 360;  // Increment and wrap the hue
             grid[newY][newX] = hue;  // Spawn sand with the current hue
-          } else {
+          } else if (substract && grid[newY][newX] !== 0) {
+            deltaCount--;  // Decrement deltaCount for each removed sand particle
             grid[newY][newX] = 0;  // Remove sand
           }
         }
       }
     }
   }
+
+  // Update the count based on deltaCount
+  count += deltaCount;
+  countDisplay.innerHTML = count;
 }
+
 
 // Add an event listener for the wheel event on the canvas
 canvas.addEventListener('wheel', function(event) {
   
   if (event.deltaY < 0) {
     // Scroll up, increase the radius
-    radius = Math.min(radius + 1, 8);
+    radius = Math.min(radius + 1, 9);
+    brushDisplay.innerHTML = radius+1;
   } else {
     // Scroll down, decrease the radius
     radius = Math.max(radius - 1, 0);
+    brushDisplay.innerHTML = radius+1;
   }
 
   event.preventDefault();
@@ -107,7 +126,7 @@ setInterval(function() {
   if (isMouseDown) {
     spawnSand(lastEvent);
   }
-}, 30);
+}, spawnFrequency);
 
 canvas.addEventListener('contextmenu', function(event) {
   event.preventDefault();  // Prevent the context menu from showing
@@ -118,23 +137,63 @@ window.addEventListener('keydown', function(event) {
     for (var i = 0; i < grid.length; i++) {
       grid[i].fill(0);
     }
-  }
-  else if (event.key === 's') {
+    count = 0;
+    countDisplay.innerHTML = count;
+  } else if (event.key === 's') {
     substract = !substract;
-  }
-  else if (event.key === 'ArrowUp') {
+    typeDisplay.innerHTML = substract ? 'Remove' : 'Spawn';
+  } else if (event.key === 'ArrowUp') {
     gravity = -1;
-  }
-  else if (event.key === 'ArrowDown') {
+  } else if (event.key === 'ArrowDown') {
     gravity = 1;
+  } else if (event.key === 'c') {
+    if (platforms.length > 0) {
+      // Get the starting point of the first platform that was created
+      var platform = platforms.shift();
+      removePlatform(platform.x, platform.y);
+    }
+  }else if (event.key === '+'){
+    radius = Math.min(radius + 1, 9);
+    brushDisplay.innerHTML = radius;
+  } else if (event.key === '-'){
+    radius = Math.max(radius - 1, 0);
+    brushDisplay.innerHTML = radius;
   }
 });
+
+function removePlatform(i, j) {
+  if (i < 0 || i >= grid.length || j < 0 || j >= grid[0].length || grid[i][j] !== -1) {
+    return;
+  }
+
+  // Find the platform this cell belongs to
+  var index = platforms.findIndex(function(p) {
+    return p.x === i && p.y === j;
+  });
+
+  // If the cell is in the platforms array, remove it
+  if (index !== -1) {
+    platforms.splice(index, 1);
+  }
+
+  grid[i][j] = 0; // Remove platform
+
+  // Check neighboring cells
+  removePlatform(i - 1, j);
+  removePlatform(i + 1, j);
+  removePlatform(i, j - 1);
+  removePlatform(i, j + 1);
+}
+
 
 function createPlatform(start, end) {
   var startX = Math.floor(start.x / cellSize);
   var startY = Math.floor(start.y / cellSize);
   var endX = Math.floor(end.x / cellSize);
   var endY = Math.floor(end.y / cellSize);
+
+  // Add the starting point of the platform to the platforms array
+  platforms.push({x: startY, y: startX});
 
   var dx = Math.abs(endX - startX);
   var dy = Math.abs(endY - startY);
