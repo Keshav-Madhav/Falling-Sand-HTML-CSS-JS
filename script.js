@@ -4,6 +4,7 @@ var ctx = canvas.getContext('2d');
 var brushDisplay = document.getElementById('brush');
 var typeDisplay = document.getElementById('type');
 var countDisplay = document.getElementById('count');
+var gravityDisplay = document.getElementById('gravity');
 
 var isMouseDown = false;
 var isRightMouseDown = false;
@@ -14,7 +15,8 @@ var hue = 0;
 var hueIncrement = 0.1;
 var platformStart, platformEnd;
 var cellSize = 4;
-var gravity = 1;
+var gravityX = 0;
+var gravityY = 1;
 var substract = false;
 var spawnFrequency = 50;
 var platforms = []
@@ -139,20 +141,48 @@ window.addEventListener('keydown', function(event) {
     }
     count = 0;
     countDisplay.innerHTML = count;
-  } else if (event.key === 's') {
+  } else if (event.key === 'p') {
     substract = !substract;
     typeDisplay.innerHTML = substract ? 'Remove' : 'Spawn';
   } else if (event.key === 'ArrowUp') {
-    gravity = -1;
+    gravityX = 0;
+    gravityY = -1;
+    gravityDisplay.innerHTML = 'Up';
   } else if (event.key === 'ArrowDown') {
-    gravity = 1;
+    gravityX = 0;
+    gravityY = 1;
+    gravityDisplay.innerHTML = 'Down';
+  } else if (event.key === 'ArrowLeft') {
+    gravityX = -1;
+    gravityY = 0;
+    gravityDisplay.innerHTML = 'Left';
+  } else if (event.key === 'ArrowRight') {
+    gravityX = 1;
+    gravityY = 0;
+    gravityDisplay.innerHTML = 'Right';
+  } else if (event.key === 'q') {
+    gravityX = -1;
+    gravityY = -1;
+    gravityDisplay.innerHTML = 'Up Left';
+  } else if (event.key === 'w') {
+    gravityX = 1;
+    gravityY = -1;
+    gravityDisplay.innerHTML = 'Up Right';  
+  } else if (event.key === 'a') {
+    gravityX = -1;
+    gravityY = 1;
+    gravityDisplay.innerHTML = 'Down Left';
+  } else if (event.key === 's') {
+    gravityX = 1;
+    gravityY = 1;
+    gravityDisplay.innerHTML = 'Down Right';
   } else if (event.key === 'c') {
     if (platforms.length > 0) {
       // Get the starting point of the first platform that was created
       var platform = platforms.shift();
       removePlatform(platform.x, platform.y);
     }
-  }else if (event.key === '+'){
+  } else if (event.key === '+'){
     radius = Math.min(radius + 1, 9);
     brushDisplay.innerHTML = radius;
   } else if (event.key === '-'){
@@ -245,54 +275,92 @@ function drawGrid(ctx, grid, cellSize) {
   }
 }
 
-function handleSandFalling(oldGrid, i, j) {
-  var nextRow = i + gravity;
-  var next = oldGrid[nextRow][j];
-  var nextLeft = oldGrid[nextRow][j - 1];
-  var nextRight = oldGrid[nextRow][j + 1];
+function handleFallingSand(oldGrid, i, j, gravityX, gravityY) {
+  var nextRow = i + gravityY;
+  var nextCol = j + gravityX;
+  var next = oldGrid[nextRow] && oldGrid[nextRow][nextCol];
+  var nextUp, nextDown, nextLeft, nextRight;
+
+  if (gravityX !== 0) { // For left and right gravity
+    nextUp = oldGrid[nextRow - 1] && oldGrid[nextRow - 1][nextCol];
+    nextDown = oldGrid[nextRow + 1] && oldGrid[nextRow + 1][nextCol];
+  } else { // For up and down gravity
+    nextLeft = oldGrid[nextRow] && oldGrid[nextRow][nextCol - 1];
+    nextRight = oldGrid[nextRow] && oldGrid[nextRow][nextCol + 1];
+  }
 
   if (next === 0) {
-    oldGrid[nextRow][j] = oldGrid[i][j];
+    oldGrid[nextRow][nextCol] = oldGrid[i][j];
     oldGrid[i][j] = 0;
-  } else if (nextLeft === 0 && nextRight === 0) {
-    oldGrid[nextRow][j + (Math.random() < 0.5 ? -1 : 1)] = oldGrid[i][j];
+  } else if ((nextUp === 0 && nextDown === 0) || (nextLeft === 0 && nextRight === 0)) {
+    var direction = Math.random() < 0.5 ? -1 : 1;
+    if (gravityX !== 0) { // For left and right gravity
+      oldGrid[nextRow + direction][nextCol] = oldGrid[i][j];
+    } else { // For up and down gravity
+      oldGrid[nextRow][nextCol + direction] = oldGrid[i][j];
+    }
     oldGrid[i][j] = 0;
-  } else if (nextLeft === 0) {
-    oldGrid[nextRow][j - 1] = oldGrid[i][j];
+  } else if (nextUp === 0 || nextLeft === 0) {
+    if (gravityX !== 0) { // For left and right gravity
+      oldGrid[nextRow - 1][nextCol] = oldGrid[i][j];
+    } else { // For up and down gravity
+      oldGrid[nextRow][nextCol - 1] = oldGrid[i][j];
+    }
     oldGrid[i][j] = 0;
-  } else if (nextRight === 0) {
-    oldGrid[nextRow][j + 1] = oldGrid[i][j];
+  } else if (nextDown === 0 || nextRight === 0) {
+    if (gravityX !== 0) { // For left and right gravity
+      oldGrid[nextRow + 1][nextCol] = oldGrid[i][j];
+    } else { // For up and down gravity
+      oldGrid[nextRow][nextCol + 1] = oldGrid[i][j];
+    }
     oldGrid[i][j] = 0;
   }
 }
 
 
-function fallingSand(oldGrid) {
-  var start = gravity === 1 ? oldGrid.length - 2 : 1;
-  var end = gravity === 1 ? 0 : oldGrid.length - 1;
-  var step = gravity === 1 ? -1 : 1;
+function fallingSand(oldGrid, gravityX, gravityY) {
+  if (gravityY !== 0) { // For up and down gravity
+    var startI = gravityY === 1 ? oldGrid.length - 1 : 0;
+    var endI = gravityY === 1 ? -1 : oldGrid.length;
+    var stepI = gravityY === 1 ? -1 : 1;
 
-  for (var i = start; gravity === 1 ? i >= end : i <= end; i += step) {
-    var startJ = (i % 2 === 0) ? 0 : oldGrid[i].length - 1;
-    var endJ = (i % 2 === 0) ? oldGrid[i].length : -1;
-    var stepJ = (i % 2 === 0) ? 1 : -1;
+    for (var i = startI; i !== endI; i += stepI) {
+      var startJ = (i % 2 === 0) ? 0 : oldGrid[0].length - 1;
+      var endJ = (i % 2 === 0) ? oldGrid[0].length : -1;
+      var stepJ = (i % 2 === 0) ? 1 : -1;
 
-    for (var j = startJ; gravity === 1 ? j !== endJ : j !== endJ; j += stepJ) {
-      if (oldGrid[i][j] > 0) {
-        handleSandFalling(oldGrid, i, j);
-      } else if (oldGrid[i][j] === -1) {
-        oldGrid[i][j] = -1;
+      for (var j = startJ; j !== endJ; j += stepJ) {
+        if (oldGrid[i][j] > 0) {
+          handleFallingSand(oldGrid, i, j, gravityX, gravityY);
+        }
+      }
+    }
+  } else if (gravityX !== 0) { // For left and right gravity
+    var startJ = gravityX === 1 ? oldGrid[0].length - 1 : 0;
+    var endJ = gravityX === 1 ? -1 : oldGrid[0].length;
+    var stepJ = gravityX === 1 ? -1 : 1;
+
+    for (var j = startJ; j !== endJ; j += stepJ) {
+      var startI = (j % 2 === 0) ? 0 : oldGrid.length - 1;
+      var endI = (j % 2 === 0) ? oldGrid.length : -1;
+      var stepI = (j % 2 === 0) ? 1 : -1;
+
+      for (var i = startI; i !== endI; i += stepI) {
+        if (oldGrid[i][j] > 0) {
+          handleFallingSand(oldGrid, i, j, gravityX, gravityY);
+        }
       }
     }
   }
 }
+
 
 function animate(grid) {
   // Clear the canvas
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  fallingSand(grid);  // Update the grid
+  fallingSand(grid, gravityX, gravityY);  // Update the grid
 
   drawGrid(ctx, grid, cellSize);
 
