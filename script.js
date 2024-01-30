@@ -1,70 +1,41 @@
-var canvas = document.querySelector('canvas');
-var ctx = canvas.getContext('2d');
+////////// Variable Declerations //////////
 
-var brushDisplay = document.getElementById('brush');
-var typeDisplay = document.getElementById('type');
-var countDisplay = document.getElementById('count');
-var gravityDisplay = document.getElementById('gravity');
+// Dom elements
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
+const brushDisplay = document.getElementById('brush');
+const typeDisplay = document.getElementById('type');
+const countDisplay = document.getElementById('count');
+const gravityDisplay = document.getElementById('gravity');
+
+// Constants
+const hueIncrement = 0.1;
+const cellSize = 4;
+const spawnFrequency = 50;
+
+// Vars
+var grid = createGrid();
 var isMouseDown = false;
 var isRightMouseDown = false;
 var lastEvent;
 var lastEvent2;
 var radius = 2;
 var hue = 0;
-var hueIncrement = 0.1;
 var platformStart, platformEnd;
-var cellSize = 4;
 var gravityX = 0;
 var gravityY = 1;
 var substract = false;
-var spawnFrequency = 50;
 var platforms = []
 var count = 0;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
 
-function spawnSand(event) {
-  var x, y;
+//////Event Listeners//////
 
-  x = (event.touches ? event.touches[0].clientX : event.clientX) / cellSize | 0;
-  y = (event.touches ? event.touches[0].clientY : event.clientY) / cellSize | 0;
-
-  // Counter for the number of sand particles added or removed
-  var deltaCount = 0;
-
-  // Spawn sand in a radius around the click or touch point
-  var absRadius = Math.abs(radius);
-  for (var i = -absRadius; i <= absRadius; i++) {
-    for (var j = -absRadius; j <= absRadius; j++) {
-      if (i*i + j*j <= radius*radius) {  // Check if the cell is within the radius
-        var newX = x + j;
-        var newY = y + i;
-        // Check if the new coordinates are within the grid
-        if (newX >= 0 && newX < grid[0].length && newY >= 0 && newY < grid.length) {
-          if (!substract && grid[newY][newX] === 0) {
-            deltaCount++;  // Increment deltaCount for each new sand particle
-            hue = (hue + hueIncrement) % 360;  // Increment and wrap the hue
-            grid[newY][newX] = hue;  // Spawn sand with the current hue
-          } else if (substract && grid[newY][newX] !== 0) {
-            deltaCount--;  // Decrement deltaCount for each removed sand particle
-            grid[newY][newX] = 0;  // Remove sand
-          }
-        }
-      }
-    }
-  }
-
-  // Update the count based on deltaCount
-  count += deltaCount;
-  countDisplay.innerHTML = count;
-}
-
-
-// Add an event listener for the wheel event on the canvas
+// Event listener for the wheel event on the canvas
 canvas.addEventListener('wheel', function(event) {
-  
   if (event.deltaY < 0) {
     // Scroll up, increase the radius
     radius = Math.min(radius + 1, 9);
@@ -78,7 +49,7 @@ canvas.addEventListener('wheel', function(event) {
   event.preventDefault();
 }, { passive: false });  // Add the passive option and set it to false to make preventDefault work
 
-
+// Event listener for left or right mouse click
 canvas.addEventListener('mousedown', function(event) {
   if(event.button === 0) {
     isMouseDown = true;
@@ -90,6 +61,8 @@ canvas.addEventListener('mousedown', function(event) {
     lastEvent2 = event;
   }
 });
+
+// Event listener for left or right mouse up
 canvas.addEventListener('mouseup', function(event) {
   if(event.button === 0) {
     isMouseDown = false;
@@ -101,6 +74,8 @@ canvas.addEventListener('mouseup', function(event) {
     lastEvent2 = event;
   }
 });
+
+//  Event listener to detect mouse movement
 canvas.addEventListener('mousemove', function(event) {
   if (isMouseDown) {
     lastEvent = event;
@@ -109,6 +84,8 @@ canvas.addEventListener('mousemove', function(event) {
     lastEvent2 = event;
   }
 });
+
+// Event Listeners for touch for touch screen devices
 canvas.addEventListener('touchstart', function(event) {
   event.preventDefault();
   isMouseDown = true;
@@ -130,10 +107,13 @@ setInterval(function() {
   }
 }, spawnFrequency);
 
+// Event listener to disable context(Right click menu)
 canvas.addEventListener('contextmenu', function(event) {
   event.preventDefault();  // Prevent the context menu from showing
 });
 
+
+// Event listeners for reading key presses
 window.addEventListener('keydown', function(event) {
   if (event.key === 'r') {
     for (var i = 0; i < grid.length; i++) {
@@ -191,31 +171,63 @@ window.addEventListener('keydown', function(event) {
   }
 });
 
-function removePlatform(i, j) {
-  if (i < 0 || i >= grid.length || j < 0 || j >= grid[0].length || grid[i][j] !== -1) {
-    return;
+
+// Event listener for detection screen rotation
+window.addEventListener('deviceorientation', function(event) {
+  var beta = event.beta; // X-axis rotation (-180 to 180)
+
+  // Check the orientation of the device
+  if (window.orientation === 0) {
+    // The device is in portrait mode
+    gravityY = beta / 180; // beta varies from -180 to 180, normalize it to -1 to 1
+  } else if (window.orientation === 90) {
+    // The device is in landscape mode and is rotated 90 degrees counterclockwise
+    gravityX = beta / 180; // beta varies from -180 to 180, normalize it to -1 to 1
+  }
+});
+
+
+//////// Functions ////////
+
+
+// Function to spawn sand around click's in the given radius.
+function spawnSand(event) {
+  var x, y;
+  x = (event.touches ? event.touches[0].clientX : event.clientX) / cellSize | 0;
+  y = (event.touches ? event.touches[0].clientY : event.clientY) / cellSize | 0;
+
+  // Counter for the number of sand particles added or removed
+  var deltaCount = 0;
+
+  // Spawn sand in a radius around the click or touch point
+  var absRadius = Math.abs(radius);
+  for (var i = -absRadius; i <= absRadius; i++) {
+    for (var j = -absRadius; j <= absRadius; j++) {
+      if (i*i + j*j <= radius*radius) {  // Check if the cell is within the radius
+        var newX = x + j;
+        var newY = y + i;
+        // Check if the new coordinates are within the grid
+        if (newX >= 0 && newX < grid[0].length && newY >= 0 && newY < grid.length) {
+          if (!substract && grid[newY][newX] === 0) {
+            deltaCount++;  // Increment deltaCount for each new sand particle
+            hue = (hue + hueIncrement) % 360;  // Increment and wrap the hue
+            grid[newY][newX] = hue;  // Spawn sand with the current hue
+          } else if (substract && grid[newY][newX] !== 0) {
+            deltaCount--;  // Decrement deltaCount for each removed sand particle
+            grid[newY][newX] = 0;  // Remove sand
+          }
+        }
+      }
+    }
   }
 
-  // Find the platform this cell belongs to
-  var index = platforms.findIndex(function(p) {
-    return p.x === i && p.y === j;
-  });
-
-  // If the cell is in the platforms array, remove it
-  if (index !== -1) {
-    platforms.splice(index, 1);
-  }
-
-  grid[i][j] = 0; // Remove platform
-
-  // Check neighboring cells
-  removePlatform(i - 1, j);
-  removePlatform(i + 1, j);
-  removePlatform(i, j - 1);
-  removePlatform(i, j + 1);
+  // Update the count based on deltaCount
+  count += deltaCount;
+  countDisplay.innerHTML = count;
 }
 
 
+// Function to create a platform from start drag of right mouse click to end
 function createPlatform(start, end) {
   var startX = Math.floor(start.x / cellSize);
   var startY = Math.floor(start.y / cellSize);
@@ -243,6 +255,32 @@ function createPlatform(start, end) {
       grid[startY][startX - sx] = -1; // Fill in the extra cell
     }
   }
+}
+
+
+// Function to remove the first platform that was added recursively.
+function removePlatform(i, j) {
+  if (i < 0 || i >= grid.length || j < 0 || j >= grid[0].length || grid[i][j] !== -1) {
+    return;
+  }
+
+  // Find the platform this cell belongs to
+  var index = platforms.findIndex(function(p) {
+    return p.x === i && p.y === j;
+  });
+
+  // If the cell is in the platforms array, remove it
+  if (index !== -1) {
+    platforms.splice(index, 1);
+  }
+
+  grid[i][j] = 0; // Remove platform
+
+  // Check neighboring cells
+  removePlatform(i - 1, j);
+  removePlatform(i + 1, j);
+  removePlatform(i, j - 1);
+  removePlatform(i, j + 1);
 }
 
 
@@ -275,6 +313,8 @@ function drawGrid(ctx, grid, cellSize) {
   }
 }
 
+
+// Function to handle fall conditions for each sand particle found
 function handleFallingSand(oldGrid, i, j, gravityX, gravityY) {
   var nextRow = i + gravityY;
   var nextCol = j + gravityX;
@@ -318,6 +358,7 @@ function handleFallingSand(oldGrid, i, j, gravityX, gravityY) {
 }
 
 
+// Function to find all cells which contain a cell particle which is not -1
 function fallingSand(oldGrid, gravityX, gravityY) {
   if (gravityY !== 0) { // For up and down gravity
     var startI = gravityY === 1 ? oldGrid.length - 1 : 0;
@@ -355,6 +396,7 @@ function fallingSand(oldGrid, gravityX, gravityY) {
 }
 
 
+// Draw function to re-render the grid with updated sand.
 function animate(grid) {
   // Clear the canvas
   ctx.fillStyle = 'black';
@@ -377,8 +419,4 @@ function animate(grid) {
     animate(grid);
   });
 }
-
-
-// Create the grid and start the animation
-var grid = createGrid();
 animate(grid);
