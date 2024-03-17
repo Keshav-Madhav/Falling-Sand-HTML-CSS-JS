@@ -39,11 +39,11 @@ canvas.addEventListener('wheel', function(event) {
   if (event.deltaY < 0) {
     // Scroll up, increase the radius
     radius = Math.min(radius + 1, 9);
-    brushDisplay.innerHTML = radius+1;
+    brushDisplay.innerHTML = radius + 1;
   } else {
     // Scroll down, decrease the radius
     radius = Math.max(radius - 1, 0);
-    brushDisplay.innerHTML = radius+1;
+    brushDisplay.innerHTML = radius + 1;
   }
 
   event.preventDefault();
@@ -164,27 +164,13 @@ window.addEventListener('keydown', function(event) {
     }
   } else if (event.key === '+'){
     radius = Math.min(radius + 1, 9);
-    brushDisplay.innerHTML = radius;
+    brushDisplay.innerHTML = radius + 1;
   } else if (event.key === '-'){
     radius = Math.max(radius - 1, 0);
-    brushDisplay.innerHTML = radius;
+    brushDisplay.innerHTML = radius + 1;
   }
 });
 
-
-// Event listener for detection screen rotation
-window.addEventListener('deviceorientation', function(event) {
-  var beta = event.beta; // X-axis rotation (-180 to 180)
-
-  // Check the orientation of the device
-  if (window.orientation === 0) {
-    // The device is in portrait mode
-    gravityY = beta / 180; // beta varies from -180 to 180, normalize it to -1 to 1
-  } else if (window.orientation === 90) {
-    // The device is in landscape mode and is rotated 90 degrees counterclockwise
-    gravityX = beta / 180; // beta varies from -180 to 180, normalize it to -1 to 1
-  }
-});
 
 
 //////// Functions ////////
@@ -245,6 +231,8 @@ function createPlatform(start, end) {
 
   while(true){
     grid[startY][startX] = -1;  // Set the grid cell to -1 to create the platform
+    count++
+    countDisplay.innerHTML=count
 
     if ((startX === endX) && (startY === endY)) break;
     var e2 = 2*err;
@@ -253,6 +241,8 @@ function createPlatform(start, end) {
     if (e2 > -dy && e2 < dx) { // If stepping in both x and y direction
       grid[startY - sy][startX] = -1; // Fill in the extra cell
       grid[startY][startX - sx] = -1; // Fill in the extra cell
+      count+=2
+      countDisplay.innerHTML=count
     }
   }
 }
@@ -414,6 +404,8 @@ function animate(grid) {
     ctx.strokeStyle = 'white';
     ctx.stroke();
   }
+
+  drawFPS(ctx);
 
   requestAnimationFrame(function() {
     animate(grid);
