@@ -387,7 +387,7 @@ function fallingSand(oldGrid, gravityX, gravityY) {
 
 
 // Draw function to re-render the grid with updated sand.
-function animate(grid) {
+function animate() {
   // Clear the canvas
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -406,9 +406,6 @@ function animate(grid) {
   }
 
   drawFPS(ctx);
-
-  requestAnimationFrame(function() {
-    animate(grid);
-  });
 }
-animate(grid);
+
+createConstantFPSGameLoop(120, animate);
